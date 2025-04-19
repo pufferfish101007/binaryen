@@ -3073,13 +3073,18 @@ private:
 
   void initializeTableContents() {
     for (auto& table : wasm.tables) {
+      auto info = getTableInstanceInfo(table->name);
       if (table->type.isNullable()) {
         // Initial with nulls in a nullable table.
-        auto info = getTableInstanceInfo(table->name);
         auto null = Literal::makeNull(table->type.getHeapType());
         for (Address i = 0; i < table->initial; i++) {
           info.interface()->tableStore(info.name, i, null);
         }
+      } else {
+        WASM_UNREACHABLE("unimp");
+        // assert(table->init);
+        // auto initVal = ExpressionRunner<SubType>::visit(global->init);
+        // info.interface()->tableStore(info.name, i, initVal);
       }
     }
 

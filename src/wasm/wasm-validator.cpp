@@ -4200,10 +4200,34 @@ static void validateTables(Module& module, ValidationInfo& info) {
     info.shouldBeTrue(table->initial <= table->max,
                       "table",
                       "size minimum must not be greater than maximum");
-    info.shouldBeTrue(
-      table->type.isNullable(),
-      "table",
-      "Non-nullable reference types are not yet supported for tables");
+    if (!table->type.isNullable()) {
+      info.shouldBeTrue(
+        table->init != nullptr,
+        "table",
+        "tables with non-nullable types require an initializer expression");
+      info.shouldBeSubType(table->init->type,
+          table->type,
+          table->init,
+          "init expression must be a subtype of the table type");
+      info.shouldBeTrue(Properties::isValidConstantExpression(module, table->init),
+                        "table",
+                        "table initializer value must be constant");
+      validator.validate(table->init);
+    }
+    // info.shouldBeTrue(
+    //   table->type.isNullable(),
+    //   "table",
+    //   "Non-nullable reference types are not yet supported for tables");
+    if (!module.features.hasGC()) {
+      info.shouldBeFalse(table->hasInit(),
+                         "table",
+                         "tables cannot have an initializer expression in MVP "
+                         "(requires --enable-gc).");
+    }
+    // info.shouldBeFalse(
+    //   table->hasInit(),
+    //   "table",
+    //   "Initializer expressions are not yet supported for tables.");
     auto typeFeats = table->type.getFeatures();
     if (!info.shouldBeTrue(table->type == funcref ||
                              typeFeats <= module.features,
